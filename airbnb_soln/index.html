@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.8/d3.min.js"></script>
+  <style>
+    circle {
+      opacity: 0.5;
+    }
+    body {
+        font-family: futura;
+    }
+    h2.title {
+      color: black;
+      text-align: center;
+    }
+    .axis {
+      font-family: arial;
+      font-size: 0.7em;
+    }
+    text {
+      fill: black;
+      stroke: none;
+    }
+    .label {
+      font-size: 1.5em;
+    }
+    path {
+      fill: none;
+      stroke: black;
+      stroke-width: 1px;
+    }
+    .tick {
+      fill: none;
+      stroke: black;
+    }
+    .line {
+      fill: none;
+      stroke: #4eb0bb;
+      stroke-width: 1px;
+    }
+  </style>
+  <script>
+    function draw(data) {
+    "use strict";
+
+    /*
+        D3.js setup code
+    */
+
+    // set margins according to Mike Bostock's margin conventions
+    // http://bl.ocks.org/mbostock/3019563
+    var margin = {top: 25, right: 40, bottom: 150, left: 75};
+    
+    // set height and width of chart
+    var width = 960 - margin.left - margin.right,
+        height = 500 - margin.top - margin.bottom;
+    
+    // specify the radius of our circles and the
+    // column we want to plot
+    var radius = 3,
+        field = 'San Francisco',
+        x_field = "number_of_reviews",
+        y_field = 'price',
+        size_field = 'reviews_per_month';
+  
+    // Append the title for the graph
+    d3.select("body")
+        .append("h2")
+        .text(field + " Listings")
+        .attr('class', 'title');
+    
+    // append the SVG tag with height and width to accommodate for margins
+    var svg = d3.select("body")
+                .append("svg")
+                    .attr("width", width + margin.left + margin.right)
+                    .attr("height", height + margin.top + margin.bottom)
+                .append('g')
+                    .attr('class','chart')
+                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    
+    // remove missing values
+    data = data.filter(function(d) {
+      return d[y_field] < 500;
+    });
+
+    // bind our data to svg circles for the scatter plot
+    svg.selectAll("circle")
+        .data(data)
+        .enter()
+        .append("circle")
+      
+      // maximum price
+      var max_y = d3.max(data, function(d) {
+          return +d[y_field];
+      });
+
+      // get min/max review count
+      var review_extent = d3.extent(data, function(d){
+          return +d[x_field];
+      });
+
+      // get min/max host listings count
+      var host_extent = d3.extent(data, function(d){
+          return +d[size_field];
+      });
+
+      // Create x-axis scale mapping dates -> pixels
+      var review_scale = d3.scale.linear()
+          .range([0, width])
+          .domain(review_extent);
+
+      // Create y-axis scale mapping price -> pixels
+      var measure_scale = d3.scale.linear()
+          .range([height, 0])
+          .domain([0, max_y]);
+
+      // Create y-axis scale mapping price -> pixels
+      var host_scale = d3.scale.pow().exponent(1.5)
+          .range([1, 10])
+          .domain(host_extent);
+
+      // Create D3 axis object from time_scale for the x-axis
+      var x_axis = d3.svg.axis()
+          .scale(review_scale);
+
+      // Create D3 axis object from measure_scale for the y-axis
+      var measure_axis = d3.svg.axis()
+          .scale(measure_scale)
+          .orient("left");
+
+      // Append SVG to page corresponding to the D3 x-axis
+      svg.append('g')
+          .attr('class', 'x axis')
+          .attr('transform', "translate(0," + height + ")")
+          .call(x_axis)
+      		.append('text')
+            .attr('class', 'label')
+            .attr("x", width / 2 )
+            .attr('y', 50)
+            .text("# of Reviews")
+            .style('text-anchor', 'middle');
+
+      // Append SVG to page corresponding to the D3 y-axis
+      svg.append('g')
+          .attr('class', 'y axis')
+          .call(measure_axis);
+
+      // add label to y-axis
+      var y_label = d3.select(".y.axis")
+          .append("text")
+          .attr('class', 'label')
+          .text("Price")
+          .attr("transform", "rotate(-90)");
+      
+      // center y axis label
+      y_label.attr("x", -(height / 2)).attr('y', -40)
+            .style("text-anchor", "middle");
+
+      // based on the data bound to each svg circle,
+      // change its center-x (cx) and center-y (cy)
+      // coordinates
+      d3.selectAll('circle')
+          .attr('cx', function(d) {
+              return review_scale(+d[x_field]);
+          })
+          .attr('cy', function(d) {
+              return measure_scale(+d[y_field]);
+          })
+          .attr('r', function(d) {
+            return host_scale(+d[size_field]);
+          })
+          .style('fill', function(d) {
+            switch (d['room_type']) {
+              case 'Entire home/apt':
+                return 'red';
+              case 'Private room':
+                return 'green'
+              case 'Shared room':
+                return 'blue';
+              default:
+                return 'gray';
+            }
+          });
+    }
+  </script>
+</head>
+  <body>
+    <script>
+      /*
+      Use D3 to load the CSV file and pass
+      the contents of it to the draw function.
+      */
+      d3.csv("http://jay-oh-en.github.io/interactive-data-viz/data/airbnb/listings.csv", draw);
+    </script>
+  </body>
+</html>
